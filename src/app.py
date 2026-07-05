@@ -4,6 +4,7 @@ import shutil
 import threading
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from werkzeug.utils import secure_filename
+from flask_cors import CORS
 
 from src.config import HOST, PORT, MAX_CONTENT_LENGTH, TEMP_DIR, logger
 from src.tasks import task_manager
@@ -16,6 +17,7 @@ app = Flask(
     static_folder=os.path.join(_base_dir, "static"),
 )
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 def allowed_file(filename: str) -> bool:
