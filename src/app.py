@@ -8,7 +8,7 @@ from flask_cors import CORS
 
 from src.config import HOST, PORT, MAX_CONTENT_LENGTH, TEMP_DIR, logger
 from src.tasks import task_manager
-from src.printer import print_pdf
+from src.printer import print_file
 
 _base_dir = os.path.dirname(os.path.abspath(__file__))
 app = Flask(
@@ -21,7 +21,8 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 def allowed_file(filename: str) -> bool:
-    return filename.lower().endswith(".pdf")
+    ext = os.path.splitext(filename.lower())[1]
+    return ext in {'.pdf', '.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.webp'}
 
 
 @app.route("/")
@@ -70,7 +71,7 @@ def handle_print():
         return jsonify({"error": "No file selected"}), 400
 
     if not allowed_file(file.filename):
-        return jsonify({"error": "Only PDF files are supported"}), 400
+        return jsonify({"error": "Only PDF and image files (PNG, JPG, JPEG, BMP, GIF, TIFF, WEBP) are supported"}), 400
 
     printer_name = request.form.get("printer", None)
 
@@ -78,15 +79,15 @@ def handle_print():
     task = task_manager.create(filename)
 
     tmp_dir = tempfile.mkdtemp(prefix="job_", dir=TEMP_DIR)
-    pdf_path = os.path.join(tmp_dir, filename)
-    file.save(pdf_path)
-    logger.info(f"Saved uploaded PDF to {pdf_path}, size={os.path.getsize(pdf_path)} bytes")
+    file_path = os.path.join(tmp_dir, filename)
+    file.save(file_path)
+    logger.info(f"Saved uploaded file to {file_path}, size={os.path.getsize(file_path)} bytes")
 
     def run_print():
         try:
-            print_pdf(task.id, pdf_path, filename, printer_name=printer_name)
+            print_file(task.id, file_path, filename, printer_name=printer_name)
         finally:
-            # 打印完成后清理 PDF 临时目录
+            # 打印完成后清理临时目录
             try:
                 shutil.rmtree(tmp_dir, ignore_errors=True)
                 logger.info(f"Cleaned up temp dir: {tmp_dir}")

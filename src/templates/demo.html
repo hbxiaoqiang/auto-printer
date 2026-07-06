@@ -25,19 +25,19 @@
             </div>
             <div>
                 <h1>Auto Printer</h1>
-                <p class="subtitle">上传 PDF，自动调用本地默认打印机静默打印</p>
+                <p class="subtitle">上传 PDF 或图片，自动调用本地默认打印机静默打印</p>
             </div>
         </div>
 
         <div class="drop-zone" id="dropZone">
-            <input type="file" id="fileInput" accept="application/pdf" hidden>
+            <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.bmp,.gif,.tiff,.webp" hidden>
             <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="17 8 12 3 7 8"></polyline>
                 <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
-            <p class="drop-text"><strong>点击选择</strong> 或拖拽 PDF 到此处</p>
-            <p class="drop-hint">仅支持 PDF 文件，最大 50MB</p>
+            <p class="drop-text"><strong>点击选择</strong> 或拖拽文件到此处</p>
+            <p class="drop-hint">支持 PDF / PNG / JPG / JPEG / BMP / GIF / TIFF / WEBP，最大 50MB</p>
         </div>
 
         <div class="file-info" id="fileInfo" style="display: none;">

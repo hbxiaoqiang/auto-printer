@@ -44,8 +44,12 @@ function updateFileDisplay() {
 
 function handleFile(file) {
     if (!file) return;
-    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-        setStatus('error', '请选择 PDF 文件');
+    const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/bmp', 'image/tiff', 'image/webp'];
+    const validExts = ['.pdf', '.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.webp'];
+    const lowerName = file.name.toLowerCase();
+    const isValidType = validTypes.includes(file.type) || validExts.some(ext => lowerName.endsWith(ext));
+    if (!isValidType) {
+        setStatus('error', '不支持的文件格式，请上传 PDF 或图片文件');
         return;
     }
     if (file.size > 50 * 1024 * 1024) {
