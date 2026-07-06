@@ -202,6 +202,7 @@ def _print_images_windows(images: List[str], printer_name: str = None, orientati
     """
     import win32print
     import win32ui
+    import win32gui
     import win32con
     from PIL import ImageWin
 
@@ -225,12 +226,11 @@ def _print_images_windows(images: List[str], printer_name: str = None, orientati
         if img.mode != "RGB":
             img = img.convert("RGB")
 
-        # 获取打印机信息并设置方向
+        # 获取打印机信息并尝试设置方向
+        orientation_set = False
         h_printer = win32print.OpenPrinter(printer)
         try:
-            # 获取当前打印机配置
             devmode = win32print.GetPrinter(h_printer, 2)["pDevMode"]
-            
             if devmode is not None:
                 # 设置方向: 1=竖屏(PORTRAIT), 2=横屏(LANDSCAPE)
                 if orientation == 'landscape':
@@ -239,14 +239,28 @@ def _print_images_windows(images: List[str], printer_name: str = None, orientati
                 elif orientation == 'portrait':
                     devmode.Orientation = 1  # DMORIENT_PORTRAIT
                     logger.info("Set printer orientation to PORTRAIT")
-            else:
-                logger.warning("Printer devmode is None, cannot set orientation")
-            
-            # 创建设备上下文，传入修改后的 devmode
-            hdc = win32ui.CreateDC()
-            hdc.CreatePrinterDC(printer, devmode)
+
+                # 尝试用 devmode 创建 DC（新版 pywin32）
+                try:
+                    hdc_handle = win32gui.CreateDC("WINSPOOL", printer, None, devmode)
+                    hdc = win32ui.CreateDCFromHandle(hdc_handle)
+                    orientation_set = True
+                    logger.info("Created DC with devmode via win32gui.CreateDC")
+                except Exception as e:
+                    logger.warning(f"Failed to create DC with devmode: {e}")
+
+            if not orientation_set:
+                # 降级：只用打印机名创建 DC（兼容旧版 pywin32 / 虚拟机环境）
+                hdc = win32ui.CreateDC()
+                hdc.CreatePrinterDC(printer)
+                logger.info("Created DC via CreatePrinterDC without devmode")
         finally:
             win32print.ClosePrinter(h_printer)
+
+        # 如果无法通过 devmode 设置方向，直接旋转图片实现方向适配
+        if not orientation_set and orientation == 'landscape':
+            img = img.rotate(90, expand=True)
+            logger.info("Rotated image 90 degrees for landscape fallback")
 
         hdc.StartDoc(img_path)
         hdc.StartPage()
