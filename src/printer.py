@@ -62,7 +62,26 @@ def get_printers():
         for flags, name, desc, comment in win32print.EnumPrinters(
             win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS
         ):
-            printers.append(name)
+            try:
+                h_printer = win32print.OpenPrinter(name)
+                try:
+                    info = win32print.GetPrinter(h_printer, 2)
+                    status = info.get("Status", 0)
+                    bad_status = (
+                        win32print.PRINTER_STATUS_OFFLINE
+                        | win32print.PRINTER_STATUS_ERROR
+                        | win32print.PRINTER_STATUS_NOT_AVAILABLE
+                        | 0x00000001  # PRINTER_STATUS_UNKNOWN
+                    )
+                    if status & bad_status:
+                        logger.warning(f"Printer {name} is offline or error (status={status}), skipping")
+                        continue
+                    printers.append(name)
+                finally:
+                    win32print.ClosePrinter(h_printer)
+            except Exception as e:
+                logger.warning(f"Failed to query printer {name}: {e}")
+                continue
     elif sys.platform == "darwin":
         result = subprocess.run(
             ["/usr/bin/lpstat", "-p"],
@@ -188,10 +207,18 @@ def _print_images_windows(images: List[str], printer_name: str = None, orientati
 
     if printer_name:
         printer = printer_name
+        logger.info(f"Using specified printer: {printer}")
     else:
-        printer = win32print.GetDefaultPrinter()
+        # 优先获取在线打印机，没有在线打印机时回退到系统默认打印机
+        available = get_printers()
+        if available:
+            printer = available[0]
+            logger.info(f"Auto-selected first online printer: {printer}")
+        else:
+            printer = win32print.GetDefaultPrinter()
+            logger.warning("No online printer found, falling back to default printer")
     if not printer:
-        raise RuntimeError("No printer specified and no default printer found")
+        raise RuntimeError("No online printer available and no default printer found")
 
     for img_path in images:
         img = Image.open(img_path)
